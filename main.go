@@ -1,9 +1,96 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+
+	"github.com/bytecodealliance/wasmtime-go/v25"
 )
 
 func main() {
-	fmt.Println("Hello, World!")
+	// 解析命令行参数
+	filename := flag.String("PATH", "main.wasm", "wasm file")
+	flag.Parse()
+
+	// fmt.Println("PATH:", *filename)
+
+	// Almost all operations in wasmtime require a contextual `store`
+	// argument to share, so create that first
+	linker := wasmtime.NewLinker(wasmtime.NewEngine())
+	store := wasmtime.NewStore(wasmtime.NewEngine())
+
+	// Compiling modules requires WebAssembly binary input, but the wasmtime
+	// package also supports converting the WebAssembly text format to the
+	// binary format.
+	// wasm, err := wasmtime.Wat2Wasm(`
+	//   (module
+	//     (import "" "hello" (func $hello))
+	//     (func (export "run")
+	//       (call $hello))
+	//   )
+	// `)
+
+	// Once we have our binary `wasm` we can compile that into a `*Module`
+	// which represents compiled JIT code.
+	// module, err := wasmtime.NewModule(store.Engine, wasm)
+	// check(err)
+	module, err := wasmtime.NewModuleFromFile(store.Engine, *filename)
+	check(err)
+
+	// Our `hello.wat` file imports one item, so we create that function
+	// here.
+	// item := wasmtime.WrapFunc(store, func() {
+	// 	fmt.Println("Hello from Go!")
+	// })
+
+	// `(func (param i32))
+	linker.DefineFunc(store, "spectest", "print_char",
+		func(arg int32) {
+			// if arg == '\n' {
+			// 	fmt.Printf("\n")
+			// } else {
+			fmt.Printf("%c", arg)
+			// }
+		})
+
+	var buffer []byte
+
+	linker.DefineFunc(store, "__h", "h_sd",
+		func(arg int32) {
+			buffer = append(buffer, byte(arg)) // Ensure you convert int32 to byte if needed
+		})
+
+	linker.DefineFunc(store, "__h", "h_se",
+		func() {
+			json_str := string(buffer)
+			fmt.Println(json_str)
+			// // 反序列化 JSON 字符串
+			// var data interface{}
+			// err := json.Unmarshal([]byte(json_str), &data)
+			// check(err)
+
+			// 清空缓冲区
+			buffer = buffer[:0]
+		})
+
+	// Next up we instantiate a module which is where we link in all our
+	// imports. We've got one import so we pass that in here.
+	instance, err := linker.Instantiate(store, module)
+	// wasmtime.NewInstance(store, module, []wasmtime.AsExtern{item, item, item})
+	check(err)
+
+	// After we've instantiated we can lookup our `run` function and call
+	// it.
+	run := instance.GetFunc(store, "_start")
+	if run == nil {
+		panic("not a function")
+	}
+	_, err = run.Call(store)
+	check(err)
+}
+
+func check(e error) {
+	if e != nil {
+		panic(e)
+	}
 }
