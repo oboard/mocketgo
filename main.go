@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 
@@ -57,17 +58,20 @@ func main() {
 
 	linker.DefineFunc(store, "__h", "h_sd",
 		func(arg int32) {
-			buffer = append(buffer, byte(arg)) // Ensure you convert int32 to byte if needed
+			if arg != 0 {
+				buffer = append(buffer, byte(arg))
+			}
 		})
 
 	linker.DefineFunc(store, "__h", "h_se",
 		func() {
-			json_str := string(buffer)
-			fmt.Println(json_str)
-			// // 反序列化 JSON 字符串
-			// var data interface{}
-			// err := json.Unmarshal([]byte(json_str), &data)
-			// check(err)
+			// 反序列化 JSON 字符串
+			var data []interface{}
+			err := json.Unmarshal(buffer, &data)
+			check(err)
+
+			// 打印 JSON 数据
+			fmt.Println(data)
 
 			// 清空缓冲区
 			buffer = buffer[:0]
