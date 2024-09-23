@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"net/http"
 
 	"github.com/bytecodealliance/wasmtime-go/v25"
 )
@@ -47,11 +48,7 @@ func main() {
 	// `(func (param i32))
 	linker.DefineFunc(store, "spectest", "print_char",
 		func(arg int32) {
-			// if arg == '\n' {
-			// 	fmt.Printf("\n")
-			// } else {
 			fmt.Printf("%c", arg)
-			// }
 		})
 
 	var buffer []byte
@@ -72,7 +69,16 @@ func main() {
 
 			// 打印 JSON 数据
 			fmt.Println(data)
-
+			args := data[1:]
+			switch data[0].(string) {
+			case "http.listen":
+				http.ListenAndServe(":"+args[0].(string), nil)
+			case "http.handle":
+				http.HandleFunc(args[0].(string), func(w http.ResponseWriter, r *http.Request) {
+					// 处理请求
+					w.Write([]byte("Hello, World!"))
+				})
+			}
 			// 清空缓冲区
 			buffer = buffer[:0]
 		})
