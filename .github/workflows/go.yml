@@ -22,7 +22,7 @@ jobs:
           
       - name: Build
         run: |
-          GOARCH=${{ matrix.arch }} go build -v -o mocketgo-${{ matrix.os }}-${{ matrix.arch }} ./...
+          go build -v -o mocketgo-${{ matrix.os }}-${{ matrix.arch }} ./...
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
