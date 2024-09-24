@@ -6,29 +6,35 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        arch: [amd64, arm64]
+    
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.23.1'
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.23.1'
+          
+      - name: Build
+        run: |
+          GOARCH=${{ matrix.arch }} go build -v -o mocketgo-${{ matrix.os }}-${{ matrix.arch }} ./...
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Build
-      run: go build -v -o mocketgo-linux-amd64 ./...
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Test
+        run: go test -v ./...
 
-    - name: Test
-      run: go test -v ./...
-
-    - name: Upload Release Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ github.event.release.upload_url }}
-        asset_path: ./mocketgo-linux-amd64
-        asset_name: mocketgo-linux-amd64
-        asset_content_type: application/octet-stream
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./mocketgo-${{ matrix.os }}-${{ matrix.arch }}
+          asset_name: mocketgo-${{ matrix.os }}-${{ matrix.arch }}
+          asset_content_type: application/octet-stream
